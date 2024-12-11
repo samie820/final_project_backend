@@ -3,15 +3,16 @@ from .models import Donation, CustomUser
 
 
 # Register your models here.
-@admin.register(Donation)
-class DonationAdmin(admin.ModelAdmin):
-    list_display = ('food_type', 'quantity', 'donor', 'created_at', 'is_claimed')
-    list_filter = ('is_claimed', 'created_at')
-    search_fields = ('food_type', 'donor__username')
-    readonly_fields = ('created_at',)
 
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'user_type', 'location')
-    list_filter = ('user_type',)
-    search_fields = ('username',)
+    list_display = ('username', 'email', 'user_type', 'is_staff', 'is_superuser', 'date_joined')
+    search_fields = ('username', 'email')
+    list_filter = ('user_type', 'is_staff', 'is_superuser')
+
+@admin.register(Donation)
+class DonationAdmin(admin.ModelAdmin):
+    list_display = ('food_type', 'quantity', 'donor', 'created_at', 'expires_at', 'is_claimed')
+    search_fields = ('food_type', 'donor__username')
+    list_filter = ('is_claimed', 'created_at', 'expires_at')
+    readonly_fields = ('created_at',)
