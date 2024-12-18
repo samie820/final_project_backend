@@ -6,7 +6,7 @@ from .serializers import DonationSerializer, RegisterUserSerializer, UserSeriali
 from .utils import find_closest_recipient
 from rest_framework.permissions import IsAuthenticated
 from geopy.distance import geodesic
-
+from .utils import send_notification_to_recipient
 
 
 class CreateDonationView(APIView):
@@ -19,6 +19,8 @@ class CreateDonationView(APIView):
             recipients = CustomUser.objects.filter(user_type='recipient')
             donation_location = tuple(map(float, donation.location.split(',')))
             closest_recipient = find_closest_recipient(donation_location, recipients)
+            
+            # send_notification_to_recipient(donation)
 
             # Notify the recipient (using Firebase later)
             return Response({
@@ -26,16 +28,10 @@ class CreateDonationView(APIView):
                 'closest_recipient': closest_recipient.username if closest_recipient else None
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class ActiveDonationsView(APIView):
-    def get(self, request):
-        donations = Donation.objects.filter(is_claimed=False)
-        serializer = DonationSerializer(donations, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
     
 
 class ActiveDonationsView(APIView):
+    permission_classes = [permissions.AllowAny]
     def get(self, request):
         user_location_param = request.query_params.get('location')  # e.g., "40.7128,-74.0060"
         
