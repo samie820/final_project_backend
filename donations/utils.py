@@ -25,7 +25,20 @@ def send_notification_to_recipient(donation):
             body=f"{donation.food_type} is available near you.",
         ),
         # Hardcoded to simulator
-        token="c-ddBdyk2ExMj6fE1gJ2Es:APA91bGIzSEK9PhbL91qohjcIeDFHPaLDuWT_FocQc4ZVEY7ifPrBgc5FIjw_5nvPuW7oGuZwih_MV8QzcCIUND-hkV3JqtvQYp4fdSFRvPFBlV3OPo1JPU",  # Assume this token is stored in the User model
+        token=user.device_token,  # Assume this token is stored in the User model
     )
     print('sending the message')
     messaging.send(message)
+
+def send_notification(token, title, body):
+    """Send a notification to a specific user."""
+    try:
+        message = messaging.Message(
+            notification=messaging.Notification(title=title, body=body),
+            token=token,
+        )
+        response = messaging.send(message)
+        print(f"Notification sent: {response}")
+    except Exception as e:
+        print(f"Error sending notification: {e}")
+

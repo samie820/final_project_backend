@@ -8,7 +8,9 @@ class DonationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Donation
-        fields = ['id', 'food_type', 'quantity', 'location', 'image', 'expires_at', 'distance']
+        fields = ['id', 'food_type', 'quantity', 'location', 'image', 'expires_at', 'distance', 'status']
+        
+        read_only_fields = ['created_at', 'is_claimed']
 
     def get_distance(self, obj):
         user_location = self.context.get('user_location')

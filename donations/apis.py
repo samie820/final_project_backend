@@ -86,3 +86,81 @@ class UserProfileView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+    
+
+class UpdateDonationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, donation_id):
+        try:
+            donation = Donation.objects.get(id=donation_id, donor=request.user)
+            serializer = DonationSerializer(donation, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Donation updated successfully"}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Donation.DoesNotExist:
+            return Response({"error": "Donation not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class PublishDonationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, donation_id):
+        try:
+            donation = Donation.objects.get(id=donation_id, donor=request.user)
+            if donation.status == 'draft':
+                donation.status = 'published'
+                donation.save()
+                return Response({"message": "Donation published successfully"}, status=status.HTTP_200_OK)
+            return Response({"error": "Donation is already published"}, status=status.HTTP_400_BAD_REQUEST)
+        except Donation.DoesNotExist:
+            return Response({"error": "Donation not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class DeleteDonationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, donation_id):
+        try:
+            donation = Donation.objects.get(id=donation_id, donor=request.user)
+            donation.delete()  # Soft delete
+            return Response({"message": "Donation soft deleted successfully"}, status=status.HTTP_200_OK)
+        except Donation.DoesNotExist:
+            return Response({"error": "Donation not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+
+class RestoreDonationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, donation_id):
+        try:
+            donation = Donation.all_objects.get(id=donation_id, donor=request.user, deleted_at__isnull=False)
+            donation.restore()
+            return Response({"message": "Donation restored successfully"}, status=status.HTTP_200_OK)
+        except Donation.DoesNotExist:
+            return Response({"error": "Donation not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class ReserveDonationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, donation_id):
+        try:
+            donation = Donation.objects.get(id=donation_id, is_claimed=False, reserved_by__isnull=True)
+            donation.reserved_by = request.user
+            donation.save()
+
+            # Notify the donor
+            if donation.donor.fcm_token:
+                send_notification(
+                    token=donation.donor.fcm_token,
+                    title="Donation Reserved",
+                    body=f"{request.user.username} has reserved your donation of {donation.food_type}."
+                )
+
+            return Response({"message": "Donation reserved successfully"}, status=200)
+        except Donation.DoesNotExist:
+            return Response({"error": "Donation not available or already reserved"}, status=400)
+
