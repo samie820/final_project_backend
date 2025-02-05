@@ -24,6 +24,7 @@ class CreateDonationView(APIView):
 
             # Notify the recipient (using Firebase later)
             return Response({
+                'id': donation.id,
                 'message': 'Donation created successfully',
                 'closest_recipient': closest_recipient.username if closest_recipient else None
             }, status=status.HTTP_201_CREATED)
@@ -49,7 +50,7 @@ class ActiveDonationsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        donations = Donation.objects.filter(is_claimed=False)
+        donations = Donation.objects.filter(is_claimed=False, status='published')
 
         # Calculate distances
         donations_with_distances = []
@@ -99,7 +100,7 @@ class UpdateDonationView(APIView):
                 serializer.save()
                 return Response({"message": "Donation updated successfully"}, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Donation.DoesNotExist:
+        except Exception as e:
             return Response({"error": "Donation not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
 
 

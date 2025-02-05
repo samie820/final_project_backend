@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
+from datetime import datetime
+
 
 
 # Create your models here.
@@ -74,7 +76,8 @@ class Donation(models.Model):
     
     def delete(self, using=None, keep_parents=False):
         """Override delete to implement soft delete."""
-        self.deleted_at = now()
+        now = datetime.now()
+        self.deleted_at = now
         self.save()
 
     def restore(self):
