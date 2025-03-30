@@ -2,6 +2,12 @@ from rest_framework import serializers
 from .models import Donation, CustomUser
 from geopy.distance import geodesic
 
+class UserShortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email'] 
+        
+
 
 class DonationSerializer(serializers.ModelSerializer):
     distance = serializers.SerializerMethodField()  # Read-only field
@@ -37,6 +43,8 @@ class DonationSerializer(serializers.ModelSerializer):
     def get_collection_status(self, obj):
         if obj.is_claimed:
             return "RECIPIENT_RESERVATION"
+        if obj.is_in_transit:
+            return "VOLUNTEER_IN_TRANSIT"
         if obj.self_pickup:
             return "RECIPIENT_SELF_PICKUP"
         if obj.volunteer:
@@ -67,3 +75,29 @@ class RegisterUserSerializer(serializers.ModelSerializer):
             location=validated_data['location'],
         )
         return user
+    
+
+class VolunteerDonationSerializer(serializers.ModelSerializer):
+    donor = UserShortSerializer()
+    reserved_by = UserShortSerializer()
+    collection_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Donation
+        fields = [
+            'id', 'food_type', 'quantity', 'location', 'expires_at',
+            'donor', 'reserved_by', 'is_in_transit', 'collection_status', 'image'
+        ]
+
+    def get_collection_status(self, obj):
+        if obj.is_claimed:
+            return "RECIPIENT_RESERVATION"
+        if obj.is_in_transit:
+            return "VOLUNTEER_IN_TRANSIT"
+        if obj.self_pickup:
+            return "RECIPIENT_SELF_PICKUP"
+        if obj.volunteer:
+            return "TO_BE_COLLECTED_BY_VOLUNTEER"
+        if hasattr(obj, 'volunteer_request') and not obj.volunteer_request.is_accepted():
+            return "VONTEER_REQUEST_PENDING"
+        return "PENDING_COLLECTION"

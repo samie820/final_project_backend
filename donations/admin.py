@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Donation, CustomUser
+from .models import Donation, CustomUser, VolunteerRequest
 
 
 # Register your models here.
@@ -16,3 +16,7 @@ class DonationAdmin(admin.ModelAdmin):
     search_fields = ('food_type', 'donor__username')
     list_filter = ('is_claimed', 'created_at', 'expires_at')
     readonly_fields = ('created_at',)
+
+@admin.register(VolunteerRequest)
+class DonationAdmin(admin.ModelAdmin):
+    list_display = ('donation', 'requested_by', 'accepted_by', 'created_at', 'accepted_at')

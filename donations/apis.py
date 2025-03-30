@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from .models import Donation, CustomUser, VolunteerRequest
-from .serializers import DonationSerializer, RegisterUserSerializer, UserSerializer
+from .serializers import DonationSerializer, RegisterUserSerializer, UserSerializer, VolunteerDonationSerializer
 from .utils import find_closest_recipient
 from rest_framework.permissions import IsAuthenticated
 from geopy.distance import geodesic
@@ -260,3 +260,75 @@ class AcceptVolunteerRequestView(APIView):
             return Response({"message": "You have accepted the volunteer request"}, status=200)
         except VolunteerRequest.DoesNotExist:
             return Response({"error": "No volunteer request found or already accepted"}, status=404)
+
+
+class AvailableVolunteerRequestsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        location_param = request.query_params.get('location')
+        if not location_param:
+            return Response({"error": "location query param is required (format: lat,long)"}, status=400)
+
+        try:
+            user_location = tuple(map(float, location_param.split(',')))
+        except ValueError:
+            return Response({"error": "Invalid location format. Use lat,long."}, status=400)
+
+        # Get all volunteer requests that have not been accepted
+        requests = VolunteerRequest.objects.filter(
+            accepted_by__isnull=True, donation__deleted_at__isnull=True)
+
+        results = []
+        for req in requests:
+            donation = req.donation
+            try:
+                donation_location = tuple(
+                    map(float, donation.location.split(',')))
+                distance_km = geodesic(user_location, donation_location).km
+                results.append((donation, round(distance_km, 2)))
+            except Exception as e:
+                continue  # Skip invalid locations
+
+        # Sort by distance
+        results.sort(key=lambda x: x[1])
+        donations_sorted = [item[0] for item in results]
+
+        serializer = DonationSerializer(
+            donations_sorted, many=True, context={'request': request})
+        data = serializer.data
+
+        # Attach the distance in the response
+        for i, (_, distance) in enumerate(results):
+            data[i]['distance'] = distance
+
+        return Response(data)
+
+
+class MyVolunteerAssignmentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        donations = Donation.objects.filter(
+            volunteer=request.user, deleted_at__isnull=True)
+        serializer = VolunteerDonationSerializer(donations, many=True)
+        return Response(serializer.data)
+
+
+class MarkDonationInTransitView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, donation_id):
+        try:
+            donation = Donation.objects.get(
+                id=donation_id, volunteer=request.user)
+
+            if donation.is_in_transit:
+                return Response({"message": "Donation is already in transit."}, status=200)
+
+            donation.is_in_transit = True
+            donation.save()
+
+            return Response({"message": "Donation marked as in transit."}, status=200)
+        except Donation.DoesNotExist:
+            return Response({"error": "Donation not found or unauthorized"}, status=404)

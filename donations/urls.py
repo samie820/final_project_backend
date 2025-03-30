@@ -1,5 +1,5 @@
 from django.urls import path
-from .apis import CreateDonationView, ActiveDonationsView, UpdateDonationView, DeleteDonationView, PublishDonationView, DonationDetailView, ReserveDonationView, MyReservedDonationsView, SelfPickupView, RequestVolunteerView, AcceptVolunteerRequestView
+from .apis import CreateDonationView, ActiveDonationsView, UpdateDonationView, DeleteDonationView, PublishDonationView, DonationDetailView, ReserveDonationView, MyReservedDonationsView, SelfPickupView, RequestVolunteerView, AcceptVolunteerRequestView, AvailableVolunteerRequestsView, MyVolunteerAssignmentsView, MarkDonationInTransitView
 
 urlpatterns = [
     path('donations/create/', CreateDonationView.as_view(), name='create_donation'),
@@ -13,7 +13,6 @@ urlpatterns = [
 urlpatterns += [
     path('donations/my-reserved/', MyReservedDonationsView.as_view(),
          name='my_reserved_donations'),
-
     path('donations/<int:donation_id>/reserve/',
          ReserveDonationView.as_view(), name='reserve_donation'),
     path('donations/<int:donation_id>/update/',
@@ -28,4 +27,14 @@ urlpatterns += [
          RequestVolunteerView.as_view(), name='donation_request_volunteer'),
     path('donations/<int:donation_id>/accept-volunteer/',
          AcceptVolunteerRequestView.as_view(), name='accept_volunteer_request'),
+]
+
+
+urlpatterns += [
+    path('volunteer/requests/', AvailableVolunteerRequestsView.as_view(),
+         name='available_volunteer_requests'),
+    path('volunteer/my-assignments/', MyVolunteerAssignmentsView.as_view(),
+         name='my_volunteer_assignments'),
+    path('volunteer/donations/<int:donation_id>/in-transit/',
+         MarkDonationInTransitView.as_view(), name='mark_donation_in_transit'),
 ]

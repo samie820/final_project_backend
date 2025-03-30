@@ -71,6 +71,7 @@ class Donation(models.Model):
     )
     deleted_at = models.DateTimeField(null=True, blank=True)
     self_pickup = models.BooleanField(default=False)
+    is_in_transit = models.BooleanField(default=False)
 
     objects = DonationManager()
     all_objects = models.Manager()  # Includes soft-deleted records
