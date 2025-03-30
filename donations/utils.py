@@ -25,7 +25,7 @@ def send_notification_to_recipient(donation):
             body=f"{donation.food_type} is available near you.",
         ),
         # Hardcoded to simulator
-        token=user.device_token,  # Assume this token is stored in the User model
+        token=donation.user.token,  # Assume this token is stored in the User model
     )
     print('sending the message')
     messaging.send(message)

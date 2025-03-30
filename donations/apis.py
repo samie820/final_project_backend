@@ -22,7 +22,7 @@ class CreateDonationView(APIView):
             closest_recipient = find_closest_recipient(
                 donation_location, recipients)
 
-            # send_notification_to_recipient(donation)
+            send_notification_to_recipient(donation)
 
             # Notify the recipient (using Firebase later)
             return Response({
