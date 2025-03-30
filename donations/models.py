@@ -4,7 +4,6 @@ from django.conf import settings
 from datetime import datetime
 
 
-
 # Create your models here.
 
 class CustomUser(AbstractUser):
@@ -17,6 +16,7 @@ class CustomUser(AbstractUser):
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES)
     # Can store geolocation as a string (e.g., "latitude,longitude")
     location = models.CharField(max_length=255)
+    fcm_token = models.CharField(max_length=255, null=True, blank=True)
 
 
 class Donor(models.Model):
@@ -44,6 +44,7 @@ class DonationManager(models.Manager):
         """Exclude soft-deleted records."""
         return super().get_queryset().filter(deleted_at__isnull=True)
 
+
 class Donation(models.Model):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -69,16 +70,25 @@ class Donation(models.Model):
         settings.AUTH_USER_MODEL, related_name='volunteer_donations', null=True, blank=True, on_delete=models.SET_NULL
     )
     deleted_at = models.DateTimeField(null=True, blank=True)
-    
+    self_pickup = models.BooleanField(default=False)
+
     objects = DonationManager()
     all_objects = models.Manager()  # Includes soft-deleted records
-    
-    
+
     def delete(self, using=None, keep_parents=False):
         """Override delete to implement soft delete."""
         now = datetime.now()
         self.deleted_at = now
         self.save()
+
+    def collection_status(self):
+        if self.is_claimed:
+            return "RECIPIENT_RESERVATION"
+        if self.self_pickup:
+            return "RECIPIENT_SELF_PICKUP"
+        if self.volunteer:
+            return "TO_BE_COLLECTED_BY_VOLUNTEER"
+        return "PENDING_COLLECTION"
 
     def restore(self):
         """Restore a soft-deleted record."""
@@ -87,3 +97,17 @@ class Donation(models.Model):
 
     def __str__(self):
         return f"{self.food_type} ({self.quantity}) by {self.donor.username}"
+
+
+class VolunteerRequest(models.Model):
+    donation = models.OneToOneField(
+        Donation, on_delete=models.CASCADE, related_name='volunteer_request')
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.SET_NULL, related_name='accepted_volunteer_requests')
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
+    def is_accepted(self):
+        return self.accepted_by is not None

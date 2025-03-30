@@ -5,12 +5,15 @@ from geopy.distance import geodesic
 
 class DonationSerializer(serializers.ModelSerializer):
     distance = serializers.SerializerMethodField()  # Read-only field
+    is_reserved_by_me = serializers.SerializerMethodField()
+    is_reserved = serializers.SerializerMethodField()
+    collection_status = serializers.SerializerMethodField() 
     
     class Meta:
         model = Donation
-        fields = ['id', 'food_type', 'quantity', 'location', 'image', 'expires_at', 'distance', 'status']
+        fields = ['id', 'food_type', 'quantity', 'location', 'image', 'expires_at', 'distance', 'status', 'is_reserved_by_me', 'is_reserved', 'collection_status']
         
-        read_only_fields = ['created_at', 'is_claimed']
+        read_only_fields = ['created_at', 'is_claimed', 'is_reserved_by_me', 'is_reserved', 'collection_status']
 
     def get_distance(self, obj):
         user_location = self.context.get('user_location')
@@ -18,6 +21,32 @@ class DonationSerializer(serializers.ModelSerializer):
             donation_location = tuple(map(float, obj.location.split(',')))
             return geodesic(user_location, donation_location).kilometers
         return None
+    
+    def get_is_reserved_by_me(self, obj):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            return obj.reserved_by == request.user
+        return False
+    def get_is_reserved(self, obj):
+        request = self.context.get('request')
+        print('we are here ======?')
+        if request and hasattr(request, 'user'):
+            return obj.reserved_by is not None
+        return False
+    
+    def get_collection_status(self, obj):
+        if obj.volunteer:
+            return "TO_BE_COLLECTED"
+        return "PENDING_COLLECTION"
+    
+    def get_collection_status(self, obj):
+        if obj.is_claimed:
+            return "RECIPIENT_RESERVATION"
+        if obj.self_pickup:
+            return "RECIPIENT_SELF_PICKUP"
+        if obj.volunteer:
+            return "TO_BE_COLLECTED_BY_VOLUNTEER"
+        return "PENDING_COLLECTION"
         
 
 
