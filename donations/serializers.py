@@ -35,17 +35,14 @@ class DonationSerializer(serializers.ModelSerializer):
         return False
     
     def get_collection_status(self, obj):
-        if obj.volunteer:
-            return "TO_BE_COLLECTED"
-        return "PENDING_COLLECTION"
-    
-    def get_collection_status(self, obj):
         if obj.is_claimed:
             return "RECIPIENT_RESERVATION"
         if obj.self_pickup:
             return "RECIPIENT_SELF_PICKUP"
         if obj.volunteer:
             return "TO_BE_COLLECTED_BY_VOLUNTEER"
+        if hasattr(obj, 'volunteer_request') and not obj.volunteer_request.is_accepted():
+            return "VONTEER_REQUEST_PENDING"
         return "PENDING_COLLECTION"
         
 
